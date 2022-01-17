@@ -41,12 +41,14 @@
     mode: 0640
     # wpa_supplicant doesn't have option to check config
     # everything that follows is an ugly workaround
-    validate: "wpa_supplicant -c %s -i NaN"
+    # validate (as of ansible 2.12) only:
+    #  - checks the exit code for success or failure
+    #  - populates stdout on failure
+    # and we are interested in content of stdout for validation
+    validate: sh -c 'if wpa_supplicant -c %s -i NaN | grep -C10 "Failed to read or parse"; then exit 1; fi'
   register: status
   failed_when:
-    - "status.stdout is defined and 'Invalid' in status.stdout"
-  changed_when:
-    - "status.diff is defined and status.diff != []"
+    -  status.stdout is defined and 'Failed to read or parse' in status.stdout
   notify:
     - restart wpa_supplicant
 
